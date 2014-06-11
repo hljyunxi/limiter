@@ -3,7 +3,8 @@ limiter
 
 可自定义的CGI速率限制器
 
-例子
+例子: 比如下面是一个投票接口， 但是为了刷票， 我想限制每个ip每分钟只能投10次，
+就可以按照下面的方式实现。
 
 
 ```
@@ -13,13 +14,31 @@ import limiter
 global_limiter = limiter.Limiter()
 global_limiter.init(storage_name='igor')
 
+
+def limit_cgi(limit_str, key_func=None, dict_ret=True):
+    def _outter(func):
+        def _inner(req):
+            try:
+                return global_limiter.limit(limit_str, key_func)(func)(req)
+            except limiter.errors.RateLimitError:
+                if dict_ret:
+                    return {'success': False, 'msg': '接口调用太频繁'}
+                else:
+                    return '接口调用太频繁'
+        return _inner
+
+    return _outter
+
+
 def get_ipaddr(*largs, **kwargs):
     assert len(largs) > 0, 'largs length should be greater than 0'
     req = largs[0]
     return req.client_ip
 
+
 @au.outer_handler(main_pat='/msg/ajax_info.pat', err_pat='/msg/ajax_info.pat')
-@global_limiter.limit('10 per minute', key_func=get_ipaddr)
-def normal_vote(req):
+@limit_cgi('10 per minute', key_func=get_ipaddr)
+def vote(req):
+    # 投票的CGI逻辑
     return {'success': True}
 ```
