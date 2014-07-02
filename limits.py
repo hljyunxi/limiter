@@ -41,10 +41,10 @@ class LimitItem(object):
     @classmethod
     def match_granularity_str(cls, granularity_str):
         return granularity_str in cls.granularity[1:]
-    
+
     @property
     def expiry(self):
-        return self.amount * self.multiples
+        return self.multiples * self.granularity[0]
 
     def __eq__(self, other):
         return (self.amount == other.amount) and\
